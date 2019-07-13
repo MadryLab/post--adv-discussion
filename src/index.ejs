@@ -1,0 +1,700 @@
+<!doctype html>
+
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://distill.pub/template.v2.js"></script>
+  <script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+  <style><%= require("raw-loader!../static/style.css") %></style>
+</head>
+
+<body>
+
+<d-front-matter>
+  <script type="text/json">{
+  "title": "Discussion and Author Responses",
+  "description": "",
+  "password": "svgs",
+  "authors": [
+    {
+      "author": "Logan Engstrom",
+      "authorURL": "http://loganengstrom.com/",
+      "affiliation": "MIT"
+    },
+    {
+      "author": "Andrew Ilyas",
+      "authorURL": "http://andrewilyas.com/",
+      "affiliation": "MIT"
+    },
+    {
+      "author": "Aleksander Madry",
+      "authorURL": "https://people.csail.mit.edu/madry/",
+      "affiliation": "MIT"
+    },
+    {
+      "author": "Shibani Santurkar",
+      "authorURL": "http://people.csail.mit.edu/shibani/",
+      "affiliation": "MIT"
+    },
+    {
+      "author": "Brandon Tran",
+      "authorURL": "",
+      "affiliation": "MIT"
+    },
+    {
+      "author": "Dimitris Tsipras",
+      "authorURL": "http://people.csail.mit.edu/tsipras/",
+      "affiliation": "MIT"
+    }
+  ],
+  "katex": {
+    "delimiters": [
+      {
+        "left": "$",
+        "right": "$",
+        "display": false
+      },
+      {
+        "left": "$$",
+        "right": "$$",
+        "display": true
+      }
+    ]
+  }
+  }</script>
+</d-front-matter>
+
+<d-title></d-title>
+
+<d-article>
+
+<p> We want to thank all the commenters for the discussion and for spending time
+designing experiments analyzing, replicating, and expanding upon our results.
+These comments helped us further refine our understanding of adversarial
+examples (e.g., by visualizing useful non-robust features or illustrating how
+robust models are successful at downstream tasks), but also highlighted aspects
+of our exposition that could be made more clear and explicit. </p>
+
+<p> Our response is organized as follows: we first recap the key takeaways from
+our paper, followed by some clarifications that this discussion brought to
+light. We then address each comment individually, prefacing each longer response
+with a quick summary. </p>
+
+<p>
+We also recall some terminology from the paper that features in our responses:
+</p>
+
+<p> <i>Datasets</i>: Our experiments involve the following variants of the given
+dataset \(D\) (consists of sample-label pairs (\(x\), \(y\))) <d-footnote> The
+exact details for construction of the datasets can be found in our paper, and
+the datasets themselves can be downloaded at <a href="http://git.io/adv-
+datasets"> http://git.io/adv-datasets</a> </d-footnote>: 
+
+<ul>
+
+<li> \(\widehat{\mathcal{D}}_{R}\): Restrict each sample $x$ to features that are used by a <i> robust</i> model. </li> 
+<li>\(\widehat{\mathcal{D}}_{NR}\): Restrict each sample $x$ to features that are used by a <i> standard</i>  model.</li>
+<li>\(\widehat{\mathcal{D}}_{det}\): Adversarially perturb each sample $x$ using a standard model in a <i>  consistent manner</i>  towards class \(y + 1\mod C\).</li>
+<li>\(\widehat{\mathcal{D}}_{rand}\): Adversarially perturb each sample $x$ using a standard model towards a <i>  uniformly random</i> class.</li>
+</ul>
+</p>
+
+
+  <h2>Main points</h2>
+  
+  <h3><i><a name="takeaway1">Takeaway #1:</a></i> Adversarial examples as innate
+      brittleness vs. useful features (sensitivity vs reliance)</h3>
+  <p>The goal of our experiments with non-robust features is to understand
+  how adversarial examples fit into the following two worlds:
+<ul>
+    <li><b><a name="world1">World 1: Adversarial examples exploit directions irrelevant for
+	classification.</a></b> In this world, adversarial examples arise from
+    sensitivity to a signal that is unimportant for classification. For
+    instance, suppose there is a feature \(f(x)\) that is not generalizing
+    on the data<dt-fn>Note that \(f(x)\) could be correlated with the label
+	in the training set but not in expectation/on the test
+	set.</dt-fn>, but the model for some reason puts a lot of weight on
+    it, <i> i.e., this sensitivity is an aberration "hallucinated" by the
+	model </i>. Adversarial examples correspond to perturbing the input
+    to change this feature by a small amount. This perturbation, however,
+    would be orthogonal to how the model actually typically makes
+    predictions (on natural data). (Note that this is just a single
+    illustrative example&mdash;the key characteristic of this world is that
+    features "flipped" when making adversarial examples are separate from the
+    ones actually used to classify inputs.)
+
+</li> 
+<li><a name="world2"></a>
+    <b>World 2: Adversarial examples exploit features that are useful for
+    classification.</b> In this world, adversarial perturbations
+can correspond to changes in the input that manipulate features relevant to
+classification. Thus, models base their (mostly correct) predictions on
+features that can be altered via small perturbations.</li> 
+    </ul> 
+  </p>
+
+  <p> 
+  Recent works provide some theoretical evidence that adversarial examples
+  can arise from finite-sample overfitting [1] or other concentration of
+  measure-based phenomena [2], thus supporting the “World 1” viewpoint on
+  adversarial examples. The question is: is “World 1” the right way to
+  think about adversarial examples? If so, this would be good news&mdash;under
+  this mindset, adversarial robustness might just be a matter of getting
+  better, “bug-free” models (for example, by reducing overfitting).
+  </p>
+  <p>
+  Surprisingly, our findings show that the “World 1” mindset alone does not
+  fully capture adversarial vulnerability; “World 2“ must be taken into
+  account. Adversarial examples can&mdash;and do, if generated via standard
+  methods&mdash;rely on "flipping" features that are actually useful for
+  classification. In particular, we show that by relying <i>only</i> on
+  perturbations corresponding to standard first-order adversarial attacks
+  one can learn models that generalize to the test set. This means that
+  these perturbations truly correspond to directions that are relevant for
+  classifying new, unmodified inputs from the dataset. In summary, our
+  message is: </p>
+
+<p style="text-align:center"><b>Adversarial vulnerability can arise from
+    flipping features in the data that are useful for
+    classification of <i>correct</i> inputs.</b></p>
+
+<p>In particular, note that our experiments (training on the
+\(\widehat{\mathcal{D}}_{rand}\) and \(\widehat{\mathcal{D}}_{det}\) datasets;
+Section 3.2) would not have the same result in World 1. Concretely, in
+our “cartoon example” presented above, the classifier puts large weight \(w\) on a feature
+coordinate \(f(x)\) that is not generalizing for “natural images.” Then,
+adversarial examples towards either class can be made by simply making
+\(f(x)\) slightly positive or slightly negative. However, a classifier
+learned from these adversarial examples would <i> not </i> generalize to
+the true dataset (since it would learn to depend on a feature that is not
+useful on natural images).</p>
+
+<h3><a name="takeaway2"><i>Takeaway #2</i></a>: Learning from “meaningless” data </h3>
+<p>Another implication of our experiments is that models may not even
+<i>need</i> any information which we as humans view as "meaningful" in order
+to do well (in the generalization sense) on standard image datasets. (Our
+\(\widehat{\mathcal{D}}_{NR}\) dataset is a perfect example of this.)</p>
+
+<h3><a name="cannotpin"><i>Takeaway #3</i></a>: Cannot fully attribute adversarial
+examples to X</h3> 
+<p>On the other hand, we also show that we cannot
+conclusively fully attribute adversarial examples to any specific aspect of the
+standard training framework (BatchNorm, ResNets, SGD, etc.). In particular, our
+“robust dataset” is a counterexample to any claim of the form “given any
+dataset, training with BatchNorm/SGD/ResNets/overparameterization/etc. leads to
+adversarial vulnerability.” In that sense, the dataset clearly plays a role in
+the emergence of adversarial examples. (Also, further corroborating this is
+Preetum’s “adversarial squares” dataset  <a href="#PreetumResponse"> here </a>,
+where standard networks do not become adversarially vulnerable when there is no
+label noise or overfitting.) </p>
+
+<h2>A Few Clarifications</h2>
+<p>In addition to further refining our understanding of adversarial examples,
+the comments were also very useful in pointing out which aspects of our
+claims could benefit from further clarification. To this end, we make these
+clarifications below via a couple “non-claims”&mdash;claims that we did
+<i>not</i> intend to make. We’ll also update our paper in order to make
+these clarifications explicit.</p>
+
+<h3><a name="nonclaim1">Non-Claim #1: "Adversarial examples <i>cannot</i> be bugs"</a></h3>
+<p>
+Our goal is to say that since adversarial examples can arise from
+well-generalizing features, simply patching up the “bugs” in ML models will
+not get rid of adversarial vulnerability&mdash;we also need to make sure our
+models learn the right features. This, however, does not mean that
+adversarial vulnerability <i>cannot</i> arise from “bugs”. In fact, note
+that several papers (e.g. <dt-cite key="tanay2016boundary"></dt-cite>) 
+have proven that adversarial vulnerability can
+arise from what we refer to as “bugs,” e.g. finite-sample overfitting,
+concentration of measure, high dimensionality, etc. Furthermore,,
+Preetum’s experiments below constitute a clean demonstration of adversarial
+examples arising from “bugs” in even more realistic settings.
+</p>
+
+<h3><a name="nonclaim2">Non-Claim #2: "Adversarial examples are purely a result of the dataset"</a></h3>
+<p> Even though we <a href="#cannotpin">demonstrated</a> that datasets do
+play a role in the emergence of adversarial examples, we do not intend to
+claim that this role is exclusive.  In particular, just because the data
+<i> admits </i> non-robust functions that are well-generalizing (useful
+non-robust features), doesn’t mean that <i> any </i> model will learn to
+pick up these features. For example, it could be that the well-generalizing
+features that cause adversarial examples are only learnable by certain
+architectures. On the other hand, we do show that there is a way, via only
+altering the dataset, to induce robust models&mdash;thus, our results indicate
+that adversarial vulnerability indeed cannot be completely disentangled
+from the dataset (more on this in <a href="#cannotpin">Takeaway #3</a>).</p>
+
+<h2>Responses to comments</h2>
+
+<h3><a name="GabrielResponse1">Two Examples of Useful, Non-Robust Features (Gabriel Goh)</a></h3>
+<p><b>Response Summary</b>: The construction of explicit non-robust features is
+very interesting and makes progress towards the challenge of visualizing some of
+the useful non-robust features detected by our experiments. We also agree that
+non-robust features arising as “distractors” is indeed not precluded by our
+theoretical framework, even if it is precluded by our experiments. Though for
+our purposes this simple theoretical framework sufficed for reasoning about
+experiments<d-footnote>We also presented a theoretical setting where we can
+analyze things fully rigorously in Section 4 of our paper.</d-footnote>, this comment
+identifies finding a more comprehensive definition of feature as an interesting
+future research direction.  </p>
+
+<p><b>Response</b>: These experiments (visualizing the robustness and
+usefulness of different linear features) are very interesting! They both further
+corroborate the existence of useful, non-robust features and make progress
+towards visualizing what these non-robust features actually look like. </p>
+
+<p>We also appreciate the point made by the provided construction of non-robust
+features (as defined in our theoretical framework) that are combinations of
+useful+robust and useless+non-robust features. Our theoretical framework indeed
+enables such a scenario, even if&mdash;as the commenter already notes&mdash;our
+experimental results do not. (In this sense, the experimental results and our <a
+href="#takeaway1"> main takeaway </a> are actually stronger than our theoretical
+framework technically captures.) Specifically, in such a scenario, during the
+construction of the \(\widehat{\mathcal{D}}_{det}\) dataset, only the non-robust
+and useless term of the feature would be flipped. Thus, a classifier trained on
+such a dataset would associate the predictive robust feature with the
+<i>wrong</i> label and would thus not generalize on the test set (in contrast,
+our experiments show that classifiers trained on \(\widehat{\mathcal{D}}_{det}\)
+do generalize).</p>
+
+<p>Overall, our focus while  developing our theoretical framework was on
+enabling us to formally describe and predict the outcomes of our experiments. As
+the comment points out, putting forth a theoretical framework that captures
+non-robust features in a very precise way is an interesting future research
+direction in itself. </p>
+
+<h3><a name="GabrielResponse2">Robust Feature Leakage (Gabriel Goh)</a></h3>
+<p><b>Response Summary</b>: This
+is a valid concern that was actually one of our motivations for creating the
+\(\widehat{\mathcal{D}}_{det}\) dataset (which, as the comment notes, actually
+has <i>misleading</i> robust features). The corresponding experiment further
+improves our understanding of the underlying phenomenon.   </p>
+
+<p><b>Response</b>: This comment raises a valid concern which was in fact one of
+the primary reasons for designing the \(\widehat{\mathcal{D}}_{det}\) dataset.
+In particular, recall the construction of the \(\widehat{\mathcal{D}}_{rand}\)
+dataset: assign each input a random target label and do PGD towards that label.
+Note that unlike the \(\widehat{\mathcal{D}}_{det}\) dataset (in which the
+target class is deterministically chosen), the \(\widehat{\mathcal{D}}_{rand}\)
+dataset allows for robust features to actually have a (small) positive
+correlation with the label.  </p>
+
+<p>To see how this can happen, consider the following simple setting: we have a
+single feature \(f(x)\) that is \(1\) for cats and \(-1\) for dogs. If \(\epsilon = 0.1\)
+then \(f(x)\) is certainly a robust feature. However, randomly assigning labels
+(as in the dataset \(\widehat{\mathcal{D}}_{rand}\)) would make this feature
+uncorrelated with the assigned label, i.e., \(E[f(x)\cdot y] = 0\). Performing a
+targeted attack will thus induce some correlation with the assigned label,
+allowing a model to learn to correctly classify new inputs. </p>
+
+<p>In other words, starting from a dataset with no features, one can encode
+robust features within small perturbations. In contrast, in the
+\(\widehat{\mathcal{D}}_{det}\) dataset, the robust features are <i>correlated
+with the original label</i> (since the labels are permuted) and since they are
+robust, they cannot be flipped to correlate with the newly assigned (wrong)
+label. Still, the \(\widehat{\mathcal{D}}_{rand}\) dataset enables us to show
+that (a) PGD-based adversarial examples actually alter features in the data and
+(b) models can learn from human-meaningless/mislabeled training data. The
+\(\widehat{\mathcal{D}}_{det}\) dataset, on the other hand, illustrates that the
+non-robust features are actually sufficient for generalization and can be
+preferred over robust ones in natural settings.</p>
+
+<p>The experiment put forth in the comment is a clever way of showing that such
+leakage is indeed possible. However, we want to stress (as the comment itself
+does) that robust feature leakage does <i>not</i> have an impact on our main 
+thesis&mdash;the \(\widehat{\mathcal{D}}_{det}\) dataset explicitly controls 
+for robust
+feature leakage (and in fact, allows us to quantify the models’ preference for
+robust features vs non-robust features&mdash;see Appendix D.6 in the paper).</p>
+
+
+<h3><a name="DanJustinResponse">Adversarial Example Researchers Need to Expand What is Meant by
+	"Robustness" (Dan Hendrycks, Justin Gilmer)</a></h3>
+
+<p><b>Response Summary</b>: The demonstration of models that learn from 
+high-frequency components of the data is interesting and nicely aligns with our
+findings. Now, even though susceptibility to noise could indeed arise from 
+non-robust useful features, this kind of brittleness (akin to adversarial examples)
+of ML models has been so far predominantly viewed as a consequence of model
+“bugs” that will be eliminated by “better” models. Finally, we agree that our
+models need to be robust to a much broader set of perturbations&mdash;expanding the
+set of relevant perturbations will help identify even more non-robust features
+and further distill the useful features we actually want our models to rely on.
+
+</p>
+
+<p><b>Response</b>:   The fact that models can learn to classify correctly based
+purely on the high-frequency component of the training set is neat! This nicely
+complements one of our <a href="#takeaway1">takeaways</a>: models will rely on
+useful features even if these features appear incomprehensible to humans. </p>
+
+<p> Also, while non-robustness to noise can be an indicator of models using 
+non-robust useful features, this is not how the phenomenon was predominantly viewed.
+More often than not, the brittleness of ML models to noise was instead regarded
+as an innate shortcoming of the models, e.g., due to poor margins. (This view is
+even more prevalent in the adversarial robustness community). Thus, it was often
+expected that progress towards "better"/”bug-free” models will lead to them
+being more robust to noise and adversarial examples. </p>
+ 
+<p> Finally, we fully agree that the set of \(L_p\)-bounded perturbations is a very
+small subset of the perturbations we want our models to be robust to. Note,
+however, that the focus of our work is human-alignment&mdash;to that end, we
+demonstrate that models rely on features sensitive to patterns that are
+imperceptible to humans. Thus, the existence of other families of
+incomprehensible but useful features would provide even more support for our
+thesis&mdash;identifying and characterizing such features is an interesting area for
+future research.
+
+</p>
+
+<h3><a name="ReiichiroResponse"> Adversarially Robust Neural Style Transfer
+(Reiichiro Nakano)</a></h3> <p><b>Response Summary</b>: Very interesting
+results, highlighting the effect of non-robust features and the utility of
+robust models for downstream tasks. We’re excited to see what kind of impact
+robustly trained models will have in neural network art! We were also really
+intrigued by the mysteriousness of VGG with style transfer. As such, we took a
+deeper dive which found some interesting links between robustness and style
+transfer that suggest that perhaps robustness does indeed have a role. </p>
+
+<p><b>Response</b>:  These experiments are really cool! It is interesting that
+preventing the reliance of a model on non-robust features improves performance
+for style transfer, even without an explicit task-related objective (i.e. we
+didn’t train the networks to be better for style transfer).  </p>
+
+<p> We found the discussion of VGG as a “mysterious network” really 
+interesting&mdash;it would be valuable to understand what factors drive style transfer
+performance more generally. Though not a complete solution, we made a couple of
+observations while investigating further: </p>
+
+<p><i>Style transfer does work with AlexNet: </i>One wrinkle in the idea that
+robustness is the “secret ingredient” to style transfer could be that VGG is not
+the most naturally robust network&mdash;AlexNet is. However, based on our own
+testing, style transfer does seem to work with AlexNet out-of-the-box: </p>
+<figure class="subgrid">
+  <figcaption style="grid-column: kicker">
+    <span style="hyphens: manual;">Style transfer using AlexNet, using
+	conv_1 through conv_4.</span>
+  </figcaption>
+  <div class="l-body">
+      <img src="images/alexnetworks.png" /> 
+  </div>
+</figure>
+
+<p>Note that as the comment notes for robust models as well, there are still
+checkerboard patterns here despite the style transfer still working. So this,
+once again, might indicate that perhaps these two phenomena (checkerboard
+patterns and style transfer working) are not as intertwined as previously
+thought. </p>
+
+<p><i>From prediction robustness to layer robustness: </i>Thus, perhaps
+robustness is actually a factor here! On the other hand, both AlexNet and VGG
+are not that much more robust than ResNets (for which style transfer completely
+fails), and yet seem to have dramatically better performance. In order to try to
+explain this, recall that style transfer is implemented as a minimization of a
+combined objective consisting of a style loss and a content loss. Now, as we
+found it, the network we use to compute the style loss is far more important
+than the one for the content loss. The following demo illustrates this&mdash;we can
+actually use a non-robust ResNet for the content loss and everything works just
+fine:</p>
+<figure class="subgrid">
+  <figcaption style="grid-column: kicker">
+    <span style="hyphens: manual;">Style transfer seems to be rather
+	invariant to the choice of content network used, and very sensitive
+	to the style network used.</span>
+  </figcaption>
+  <div class="l-body">
+      <img src="images/stylematters.png" /> 
+  </div>
+</figure>
+
+<p>Therefore, from now on, we use a fixed ResNet-50 for the content loss as a
+control, and only worry about the style loss. </p>
+
+<p>Next, note that the way that style loss works is by using the first few
+layers of the relevant network. Thus, perhaps it is not about the robustness of
+VGG’s predictions, but instead the robustness of the layers that we actually use
+for style transfer? </p>
+
+<p> To test this hypothesis, we measure the robustness of a layer \(f\) as follows:
+</p> 
+
+\[ 
+R(f) = \frac{\mathbb{E}_{x_1\sim D}\left[\max_{x'} \|f(x') - f(x_1)\|_2 \right]}
+{\mathbb{E}_{x_1, x_2 \sim D}\left[\|f(x_1) - f(x_2)\|_2\right]}
+\]
+
+<p> Essentially, this tells us how much we can change the
+output of that layer \(f(x)\) within a small ball, normalized by how far apart
+representations are between images in general. We’ve plotted this value for
+the first few layers in a couple of different networks below:   </p>
+<figure class="subgrid">
+  <figcaption style="grid-column: kicker">
+    <span style="hyphens: manual;">The robustness \(R(f)\) of the first
+	four layers of VGG16, AlexNet, and robust/standard ResNet-50
+	trained on ImageNet.</span>
+  </figcaption>
+  <div class="l-body">
+      <img src="images/robustnesses.png" style="width: 80%;" /> 
+  </div>
+</figure>
+
+<p>  Here, it becomes clear that, the first few layers of VGG and AlexNet are
+indeed almost as robust as the first few layers of the robust ResNet! This is
+perhaps a more convincing indication (compared to a very small increase in
+prediction robustness) that robustness might have something to with VGG’s
+success in style transfer. </p>
+
+<p>  Finally, suppose we restrict style transfer to only use a single layer of
+the network when computing the style loss<d-footnote>Usually style transfer uses
+several layers in the loss function to get the most visually appealing results
+&mdash;here we’re only interested in whether or not style transfer works (i.e.
+actually confers some style onto the image).</d-footnote>. Again, the more
+robust layers seem to indeed work better for style transfer! Since all of the
+layers in the robust ResNet are robust, style transfer yields non-trivial
+results even using the last layer alone. Conversely, VGG and AlexNet seem to
+excel in the earlier layers (where they are non-trivially robust) but fail when
+using exclusively later (non-robust) layers: </p>
+
+<figure class="subgrid">
+  <figcaption style="grid-column: kicker">
+    <!-- <span class="figure-number">Figure 1:</span> -->
+    <span style="hyphens: manual;">Style transfer using a single layer. The
+    names of the layers and their robustness \(R(f)\) are printed below
+    each style transfer result. We find that for both networks, the robust
+    layers seem to work (for the robust ResNet, every layer is robust).</span>
+  </figcaption>
+  <div class="l-body">
+      <img src="images/styletransfer.png" /> 
+  </div>
+</figure>
+
+<p>  Of course, there is much further work to be done here, but we are excited
+to see further work into understanding the role of both robustness and the VGG
+in network-based image manipulation. </p>
+
+<h3> <a name="PreetumResponse">Adversarial Examples are Just Bugs, Too (Preetum
+Nakkiran) </a></h3> <p><b>Response Summary</b>: We note that as discussed in
+more detail in <a href="#takeaway1">Takeaway #1</a>, the mere existence of adversarial 
+examples
+that are “features” is sufficient to corroborate our main thesis. This comment
+illustrates, however, that we can indeed craft adversarial examples that are
+based on “bugs” in realistic settings. Interestingly, such examples don’t
+transfer, which provides further support for the link between transferability
+and non-robust features.
+
+</p> <p><b>Response</b>:  As mentioned <a href="#nonclaim1">above</a>, 
+we did not intend to claim
+that adversarial examples arise <i>exclusively</i> from (useful) features but rather
+that non-robust features are (at least partially) responsible. In fact, prior
+work already shows how in theory adversarial examples can arise from
+insufficient samples <d-cite
+key="tanay2016boundary"></d-cite> or finite-sample overfitting <d-cite
+key="schmidt2018adversarially"></d-cite>, and the experiments
+presented here (particularly, the adversarial squares) constitute a neat 
+real-world demonstration of these facts. </p>
+
+<p> Our main thesis that "adversarial examples will not just go away as we fix
+bugs in our models" is not contradicted by the existence of adversarial examples
+stemming from "bugs." As long as adversarial examples can stem from non-robust
+features (which the commenter seems to agree with), fixing these bugs will not
+solve the problem of adversarial examples. </p>
+
+<p> That said, the experiments cleverly zoom in on some more fine-grained
+nuances in our understanding of adversarial examples. One particular thing that
+stood out to us is that by creating a set of adversarial examples that are
+<i>explicitly</i> non-transferable, one also prevents new classifiers from learning
+features from that dataset. This finding thus makes the connection between
+transferability of adversarial examples and their containing generalizing
+features even stronger! Indeed, we can add the constructed dataset into our
+“\(\widehat{\mathcal{D}}_{det}\) learnability vs transferability” plot 
+(Figure 3 in the paper)&mdash;the point
+corresponding to this dataset fits neatly onto the trendline! </p>
+
+<figure class="subgrid">
+<figcaption style="grid-column: kicker">
+    <span>Relationship between models reliance on non-robust features and their susceptibility to transfer attacks</span>
+</figcaption>
+<div class="l-body">
+  <img src="diagrams/transfer.png" />
+</div>
+</figure>
+
+
+<h3><a name="ChrisResponse">Relationship with Feature Visualization (Chris
+	Olah)</a></h3>
+<p><b>Response
+Summary</b>:   To clarify: we do not mean to imply that the regularization
+tradeoff has not been discussed or taken into account when designing
+visualization methods. Rather we claim that this tradeoff is <i>inherent</i> for
+any model relying on non-robust features (note that regularization of any
+magnitude invokes this tradeoff). We also show that even though VGG models are
+slightly more amenable to feature visualization without regularization, (a) the
+feature visualization-based applications presented in Engstrom et al.  <d-cite
+key="engstrom2019learning"></d-cite> and Santurkar et al. <d-cite
+key="santurkar2019computer"></d-cite> fail without regularization for VGG, and
+(b) this seems to be highly related to the natural robustness of intermediate
+layers of VGG.
+</p>
+
+<p><b>Response</b>: First of all, we wanted to clarify that we did not intend to
+suggest that the trade-offs surrounding regularization methods have not been
+observed before. Rather, the point we want to make is that these tradeoffs will
+always be an obstacle to faithful visualizations as long as models rely on 
+non-robust features. That is, our results are meant to show that this regularization
+might be hiding <i>real features</i> and not just “fixing bugs”. (Note that, for
+example, in <a href="#world1">World 1</a>, where adversarial examples are just
+useless sensitivity, one could argue that regularization is a completely
+harmless way to ignore non-robust&mdash;and useless&mdash;features). Thus, one
+might worry that any regularization (no matter how weak) may result in
+interpretations that are not faithful to how the model actually makes decisions.
+</p>
+
+<p> This comment also demonstrates a really interesting property of standard 
+VGG&mdash;even without regularization, it seems possible to do feature
+visualization on some of the intermediate layers. Looking deeper into this
+phenomenon led to a few observations: </p> 
+
+<p>  <i>VGG does not seem to
+work for representation-level manipulation:</i>  Unfortunately, unregularized
+manipulation of features in the representation layer (which is what we focus on
+in Engstrom et al. <d-cite
+key="engstrom2019learning"></d-cite> and Santurkar et al. <d-cite
+key="santurkar2019computer"></d-cite>) seems to fail without
+regularization, even with VGG. For example, maximizing activations of the
+representation layer seems to yield mostly noise: 
+
+  <figure class="subgrid">
+    <figcaption style="grid-column: kicker">
+      <span style="hyphens: manual;">Feature visualization on later layers
+      seems to yield less pleasing results when unregularized.</span>
+    </figcaption>
+    <div class="l-body">
+      <img src="images/activationmax.png" />
+    </div>
+  </figure>
+
+And similarly, the
+approximate “invertibility” via gradient descent that we found to hold for
+robust networks does not seem to hold here. Concretely, if we pick a random \(x\)
+from the test set, then minimize the unregularized objective \(\min_{x'}
+||f(x) - f(x')||_2\)  with \(f\) being the representation layer of a VGG
+network, we get the following: 
+
+  <figure class="subgrid">
+    <figcaption style="grid-column: kicker">
+      <span style="hyphens: manual;">Inversion using unregularized GD does
+	  not seem to work as well for VGG as it does for Robust ResNets.
+	  Note that both the optimizations reach similar (almost-zero)
+	  loss.</span>
+    </figcaption>
+    <div class="l-body">
+      <img src="images/inversions.png" />
+    </div>
+  </figure>
+
+Thus, it seems as though even though VGG does considerably better at many
+feature visualization tasks, it still does not bring all the benefits that
+robust models bring. </p>
+
+<p>  <i>VGG has interesting robustness properties that seem to correlate with
+ease of visualization:</i> While the predictions of standard VGG models, just
+like other architectures, are quite non-robust (i.e. the predictions can be
+flipped within a very small ball), we find that the intermediate layers of VGG
+models actually seem to show nontrivial adversarial robustness. We demonstrate
+this in more detail in our response to Reiichero  (<a href="#ReiicheroResponse">
+here </a>).  </p> 
+
+<p>   Interestingly, this robustness seems to correlate pretty well with how
+well the unregularized objective \(\min_{x'} ||f(x) - f(x')||_2\) 
+is able to recover an original image based on that representation. Again,
+just like for <a href="#ReiicheroResponse">style transfer</a>, more
+research is definitely called for to understand the interplay between
+robustness, architecture, and image manipulation.  </p>
+
+<p>Finally, as the response itself concludes, adversarially trained networks
+seem to give us some really neat new properties for visualization. It is
+exciting to see results similar to ours on how robust models naturally yield
+nice visualizations. Overall, we agree it would be really valuable to explore
+and understand this phenomenon in greater depth! </p>
+
+<h3><a name="EricResponse">Learning from Incorrectly Labeled Data (Eric Wallace)</a></h3>
+<p><b>Response
+Summary</b>: Note that since our experiments work across architectures,
+“distillation” in weight space does not occur. The only distillation that can
+arise is “feature space” distillation, which is actually exactly our hypothesis.
+In particular, feature-space distillation would not work in <a href="#world1">
+World 1</a>&mdash;if the
+adversarial examples we generated did not exploit useful features, we should not
+have been able to “distill” a useful model from them. (In fact, one might think
+of normal model training as just “feature distillation” of the humans that
+labeled the dataset.) Furthermore, the hypothesis that all we need is enough
+model-consistent points in order to recover a model, seems to be disproven by
+Preetum’s <a href="#PreetumResponse"> “bugs-only dataset”</a>
+and other (e.g. <d-cite key="milli2018model"></d-cite>) settings. </p>
+
+<p><b>Response</b>:  Since our experiments work across architectures,
+“distillation” in weight space cannot arise. Thus, from what we understand, the
+“distillation” hypothesis suggested here is referring to “feature distillation”
+(i.e. getting models which use the same features as the original), which is
+actually precisely our hypothesis too. Notably, this feature distillation would
+not be possible if adversarial examples did not rely on “flipping” features that
+are good for classification (see <a href="#world1">World 1</a> and 
+<a href="#world2">World 2</a>)&mdash;the distilled
+model would only use features that generalize poorly, and would thus generalize
+poorly itself.  </p>
+
+<p> Moreover, we would argue that in the experiments presented (learning from
+mislabeled data), the same kind of distillation is happening. For instance, a
+moderately accurate model might associate "green background" with "frog" thus
+labeling "green" images as "frogs" (e.g., the horse in the comment's figure).
+Training a new model on this dataset will thus associate "green" with "frog"
+achieving non-trivial accuracy on the test set (similarly for learning MNIST
+from Fashion-MNIST). This corresponds exactly to learning features from labels,
+similar to how deep networks "distill" a good decision boundary from human
+annotators. In fact, we find these experiments a very interesting illustration
+of feature distillation that complements our findings. </p>
+
+<p> We also note that the analogy to logistic regression here is only possible
+due to the low VC-dimension of linear classifiers (namely, these classifiers
+have dimension d). In particular, given any classifier with VC-dimension k, we
+need at least k points to fully specify the classifier. Conversely, neural
+networks have been shown to have extremely large VC-dimension (in particular,
+bigger than the size of the training set <d-cite
+key="zhang2016understanding"></d-cite>).  So even though labelling d+1 random
+points model-consistently is sufficient to recover a linear model, it is not
+necessarily sufficient to recover a deep neural network. For instance, Milli et
+al. <d-cite key="milli2018model"></d-cite> are not able to reconstruct a ResNet-18
+using only its predictions on random Gaussian inputs. (Note that we are using a
+ResNet-50 in our experiments.) </p>
+
+<p> Finally, it seems that the model proposed in this response is conclusively
+disproved by the experiment done by Preetum (see <a
+href="#PreetumResponse"> LINK</a>). In particular, Preetum is able to design a
+dataset where training on mislabeled inputs <i>that are model-consistent</i>
+does not at all recover the decision boundary of the original model. The “model
+distillation” perspective raised here is unable to distinguish between the
+dataset created by Preetum below, and those created with standard PGD (as in our
+\(\widehat{\mathcal{D}}_{det}\) and \(\widehat{\mathcal{D}}_{rand}\) datasets).
+</p>
+
+
+
+</d-article>
+
+
+
+<d-appendix>
+  <h3>Acknowledgments</h3>
+  <p>
+    We are deeply grateful to all of the commenters for their valuable
+    responses and the ensuing discussions.
+  </p>
+
+  <d-footnote-list></d-footnote-list>
+  <d-citation-list></d-citation-list>
+</d-appendix>
+
+<!-- bibliography will be inlined during Distill pipeline's pre-rendering -->
+<d-bibliography src="bibliography.bib"></d-bibliography>
+
+</body>
